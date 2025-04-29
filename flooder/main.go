@@ -1,34 +1,41 @@
 package main
 
-import "log"
-import "net/http"
-import "fmt"
-import "sync"
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"sync"
+)
 
-
-func makeRequest() {
-        resp, err := http.Get("https://nginx.wlan0.in/login")
-        if err != nil {
-                log.Println("something wrong with you bitch: ", err.Error())
-                return
-        }
-        defer resp.Body.Close()
+func makeRequest() error {
+	resp, err := http.Get(os.Getenv("TARGET_URL"))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
 }
 
 func main() {
-        numGoroutines := 100
-        n := 0
-        for {
-                wg := sync.WaitGroup{}
-                wg.Add(numGoroutines)
-                for i := 0; i < numGoroutines; i++ {
-                        go func() {
-                                defer wg.Done()
-                                makeRequest()
-                        }()
-                }
-                wg.Wait()
-                n++
-                fmt.Println(n, "batch done")
-        }
+	numGoroutines := 100
+	n := 0
+	for {
+		wg := sync.WaitGroup{}
+		wg.Add(numGoroutines)
+		for i := 0; i < numGoroutines; i++ {
+			go func() {
+				defer wg.Done()
+				err := makeRequest()
+				if err != nil {
+					log.Println("something wrong with you: ", err.Error())
+				} else {
+					log.Println("successfull req sent")
+				}
+			}()
+		}
+		wg.Wait()
+		n++
+		fmt.Println(n, "batch done")
+	}
 }
